@@ -1,0 +1,339 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- متغيرات التحكم بالمواصفات الإدارية
+local showNamesAndHp = false
+local locatePlayers = false
+local nameTags = {}
+local playerHighlights = {}
+
+local function clearVisuals()
+	for _, tag in pairs(nameTags) do
+		if tag then tag:Destroy() end
+	end
+	table.clear(nameTags)
+
+	for _, hl in pairs(playerHighlights) do
+		if hl then hl:Destroy() end
+	end
+	table.clear(playerHighlights)
+end
+
+local function applyNameAndHp(targetPlayer)
+	if targetPlayer == player then return end
+
+	local function onCharacter(char)
+		if nameTags[targetPlayer] then
+			nameTags[targetPlayer]:Destroy()
+			nameTags[targetPlayer] = nil
+		end
+		if not showNamesAndHp then return end
+
+		local head = char:WaitForChild("Head", 5)
+		local humanoid = char:WaitForChild("Humanoid", 5)
+		if not head or not humanoid then return end
+
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "PlayerNameHpTag"
+		billboard.Adornee = head
+		billboard.Size = UDim2.new(0, 175, 0, 38)
+		billboard.StudsOffset = Vector3.new(0, 2.6, 0)
+		billboard.AlwaysOnTop = true
+		billboard.Parent = playerGui
+
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, 0, 1, 0)
+		label.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+		label.BackgroundTransparency = 0.2
+		label.TextColor3 = Color3.fromRGB(240, 240, 245)
+		label.TextScaled = true
+		label.Font = Enum.Font.GothamBold
+		label.Parent = billboard
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 6)
+		corner.Parent = label
+
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(0, 170, 120)
+		stroke.Thickness = 1
+		stroke.Parent = label
+
+		local function refreshHp()
+			label.Text = string.format("%s | %d/%d HP", targetPlayer.DisplayName, math.floor(humanoid.Health), math.floor(humanoid.MaxHealth))
+		end
+
+		refreshHp()
+		humanoid.HealthChanged:Connect(refreshHp)
+		nameTags[targetPlayer] = billboard
+	end
+
+	if targetPlayer.Character then
+		onCharacter(targetPlayer.Character)
+	end
+	targetPlayer.CharacterAdded:Connect(onCharacter)
+end
+
+local function applyLocationHighlight(targetPlayer)
+	if targetPlayer == player then return end
+
+	local function onCharacter(char)
+		if playerHighlights[targetPlayer] then
+			playerHighlights[targetPlayer]:Destroy()
+			playerHighlights[targetPlayer] = nil
+		end
+		if not locatePlayers then return end
+
+		local hl = Instance.new("Highlight")
+		hl.Name = "PlayerLocationESP"
+		hl.Adornee = char
+		hl.FillColor = Color3.fromRGB(0, 170, 120)
+		hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+		hl.FillTransparency = 0.55
+		hl.OutlineTransparency = 0
+		hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		hl.Parent = playerGui
+
+		playerHighlights[targetPlayer] = hl
+	end
+
+	if targetPlayer.Character then
+		onCharacter(targetPlayer.Character)
+	end
+	targetPlayer.CharacterAdded:Connect(onCharacter)
+end
+
+local function refreshAdminFeatures()
+	clearVisuals()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if showNamesAndHp then
+			applyNameAndHp(plr)
+		end
+		if locatePlayers then
+			applyLocationHighlight(plr)
+		end
+	end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+	if showNamesAndHp then
+		applyNameAndHp(plr)
+	end
+	if locatePlayers then
+		applyLocationHighlight(plr)
+	end
+end)
+
+-- 1. إنشاء حاوية الواجهة الرئيسية
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ModernCustomUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- 2. الإطار الرئيسي (Main Frame)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 380, 0, 240)
+mainFrame.Position = UDim2.new(0.5, -190, 0.5, -120)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 10)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(60, 60, 75)
+mainStroke.Thickness = 1.5
+mainStroke.Parent = mainFrame
+
+-- 3. الشريط العلوي (Top Bar)
+local topBar = Instance.new("Frame")
+topBar.Name = "TopBar"
+topBar.Size = UDim2.new(1, 0, 0, 38)
+topBar.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+topBar.BorderSizePixel = 0
+topBar.Parent = mainFrame
+
+local topCorner = Instance.new("UICorner")
+topCorner.CornerRadius = UDim.new(0, 10)
+topCorner.Parent = topBar
+
+-- عنوان الواجهة
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -80, 1, 0)
+titleLabel.Position = UDim2.new(0, 14, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "لوحة التحكم الخاصة | Custom Hub"
+titleLabel.TextColor3 = Color3.fromRGB(240, 240, 245)
+titleLabel.TextSize = 15
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = topBar
+
+-- زر التصغير (Minimize)
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 28, 0, 28)
+minBtn.Position = UDim2.new(1, -68, 0.5, -14)
+minBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+minBtn.Text = "-"
+minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minBtn.TextSize = 18
+minBtn.Font = Enum.Font.GothamBold
+minBtn.Parent = topBar
+
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 6)
+minCorner.Parent = minBtn
+
+-- زر الإغلاق (Close)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 28, 0, 28)
+closeBtn.Position = UDim2.new(1, -34, 0.5, -14)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 14
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = topBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.Parent = closeBtn
+
+-- 4. منطقة المحتوى والأزرار (Content Container)
+local contentFrame = Instance.new("ScrollingFrame")
+contentFrame.Size = UDim2.new(1, -20, 1, -48)
+contentFrame.Position = UDim2.new(0, 10, 0, 43)
+contentFrame.BackgroundTransparency = 1
+contentFrame.ScrollBarThickness = 4
+contentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+contentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+contentFrame.Parent = mainFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 8)
+listLayout.Parent = contentFrame
+
+-- دالة مساعدة لإنشاء زر تفعيل (Toggle Button)
+local function createToggle(text, callback)
+	local state = false
+	
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -6, 0, 38)
+	btn.BackgroundColor3 = Color3.fromRGB(35, 35, 44)
+	btn.Text = ""
+	btn.Parent = contentFrame
+	
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 8)
+	btnCorner.Parent = btn
+	
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -60, 1, 0)
+	label.Position = UDim2.new(0, 12, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Color3.fromRGB(220, 220, 230)
+	label.TextSize = 14
+	label.Font = Enum.Font.GothamMedium
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = btn
+	
+	local indicator = Instance.new("Frame")
+	indicator.Size = UDim2.new(0, 36, 0, 18)
+	indicator.Position = UDim2.new(1, -46, 0.5, -9)
+	indicator.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+	indicator.Parent = btn
+	
+	local indCorner = Instance.new("UICorner")
+	indCorner.CornerRadius = UDim.new(1, 0)
+	indCorner.Parent = indicator
+	
+	local dot = Instance.new("Frame")
+	dot.Size = UDim2.new(0, 14, 0, 14)
+	dot.Position = UDim2.new(0, 2, 0.5, -7)
+	dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	dot.Parent = indicator
+	
+	local dotCorner = Instance.new("UICorner")
+	dotCorner.CornerRadius = UDim.new(1, 0)
+	dotCorner.Parent = dot
+	
+	btn.MouseButton1Click:Connect(function()
+		state = not state
+		local targetColor = state and Color3.fromRGB(0, 170, 120) or Color3.fromRGB(70, 70, 85)
+		local targetPos = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+		
+		TweenService:Create(indicator, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+		TweenService:Create(dot, TweenInfo.new(0.2), {Position = targetPos}):Play()
+		
+		if callback then
+			callback(state)
+		end
+	end)
+end
+
+-- أزرار المواصفات المطلوبة داخل نفس الواجهة
+createToggle("إظهار الأسماء والدمج (Names & HP)", function(isActive)
+	showNamesAndHp = isActive
+	refreshAdminFeatures()
+end)
+
+createToggle("تحديد أماكن اللاعبين من بعيد (Locate)", function(isActive)
+	locatePlayers = isActive
+	refreshAdminFeatures()
+end)
+
+-- 5. برمجة سحب النافذة (Dragging)
+local dragging, dragInput, dragStart, startPos
+
+topBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+	end
+end)
+
+topBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		mainFrame.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+-- 6. برمجة التصغير والإغلاق
+local minimized = false
+minBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	local targetSize = minimized and UDim2.new(0, 380, 0, 38) or UDim2.new(0, 380, 0, 240)
+	TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = targetSize}):Play()
+	minBtn.Text = minimized and "+" or "-"
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+	clearVisuals()
+	screenGui:Destroy()
+end)
